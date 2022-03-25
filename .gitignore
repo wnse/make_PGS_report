@@ -129,6 +129,6 @@ dmypy.json
 .pyre/
 
 
-test_data/
+test_data/*
 nohup.out
 
