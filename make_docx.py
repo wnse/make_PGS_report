@@ -54,7 +54,7 @@ def insert_pic(table, row, col, pic_path, width=Cm(19)):
 
 
 # %%
-def make_PGS_report(dict_family, dict_sample, dict_config, outdir='./', png_dir=None):
+def make_PGS_report(dict_family, dict_sample, dict_config, outdir='./', png_dir=None, png_name=1):
     for f, family in dict_family.items():
         print(f)
         f_out = os.path.join(outdir, f'{f}.docx')
@@ -79,7 +79,11 @@ def make_PGS_report(dict_family, dict_sample, dict_config, outdir='./', png_dir=
 
                     write_table(tables[4], row_no*4+1, 1, f"{s_info['样本编号']}")
                     write_table(tables[4], row_no*4+2, 1, f"{s_info['检测结果']}")
-                    pic_path = os.path.join(pngdir, f'{s}.png')
+                    if png_name == 2:
+                        pngName = '_2color'
+                    else:
+                        pngName = ''
+                    pic_path = os.path.join(pngdir, f'PGTA_{s}.fq_merge_all_chrom_new{pngName}.png')
                     insert_pic(tables[4], row_no*4+4, 1, pic_path)
                 row_no += 1
             d.save(f_out)
@@ -93,6 +97,7 @@ if __name__ == '__main__':
     parse.add_argument('-c', '--config', default=os.path.join(bin_dir, 'template_config.xlsx'), help='config excel for table information')
     parse.add_argument('-t', '--template', default=os.path.join(bin_dir, 'template.docx'), help='report template docx file')
     parse.add_argument('-o', '--outdir', default='./', help='report output directory')
+    parse.add_argument('-p', '--png_name', default=1, choices=[1, 2], type=int, help='1 for default, 2 for 2color')
     parse.add_argument('-f', '--figure_dir', default=None, help='figure directory')
     args = parse.parse_args()
     
@@ -118,7 +123,7 @@ if __name__ == '__main__':
     pngdir = args.figure_dir
     tempate_file = args.template
     try:
-        make_PGS_report(dict_family, dict_sample, dict_config, outdir=outdir, png_dir=pngdir)
+        make_PGS_report(dict_family, dict_sample, dict_config, outdir=outdir, png_dir=pngdir, png_name=args.png_name)
     except Exception as e:
         sys.exit(e)
 
