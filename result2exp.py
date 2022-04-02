@@ -25,18 +25,21 @@ pattern_cnv = re.compile(r'(del|dup)\((\S+?)\)\((.*?-.*?),(.*?Mb),*(mos)*,*(\d+\
 
 # %%
 def get_exp(lst):
+    if len(lst) < 2:
+        return [None, lst[0]]
+
     ty = lst[0]
     ch = lst[1]
     if ty == '+':
         if not lst[2]:
-            exp = '重复'
+            exp = '三体'
         elif lst[2] == 'mos':
             exp = '三体嵌合'
         else:
             exp = None
     elif ty == '-':
         if not lst[2]:
-            exp = '缺失'
+            exp = '单体'
         elif lst[2] == 'mos':
             exp = '单体嵌合'
         else:
@@ -61,23 +64,77 @@ def get_exp(lst):
 
 def lst2exp(lst):
     out_dict = {}
-    exp_list = [get_exp(i) for i in lst]
-    for ch, exp in exp_list:
-        if exp:
-            out_dict[exp] = out_dict.get(exp, [])
-            out_dict[exp].append(ch)
-        else:
-            logging.error(f'illegle character:\t{lst}')
+    if lst:
+        exp_list = [get_exp(i) for i in lst]
+        for ch, exp in exp_list:
+            if exp:
+                out_dict[exp] = out_dict.get(exp, [])
+                out_dict[exp].append(ch)
+            else:
+                logging.error(f'illegle character:\t{lst}')
     return out_dict
 
 
 # %%
 def get_schr(schr):
+    note = ''
     if re.match('\d+,(\w+)', schr):
         s = re.match('\d+,(\w+)', schr).group(1)
+        # if s.upper() == 'XO':
+        #     note = ' Turner综合征'
         return f"{s}"
     else:
         return None
+
+
+def get_note(schr, exp_dict):
+    out = ''
+    note = None
+    if not schr:
+        note = '不推荐移植'
+    elif schr and schr.upper() == 'XO':
+        note = '不推荐移植'
+        out = 'Turner综合征'
+    elif schr and schr.upper() in ['YO']:
+        note = '不推荐移植'
+
+    total_exp_lst = []
+    if exp_dict:
+        for i, v in exp_dict.items():
+            if v[0]:
+                chrs = '、'.join(v)
+                total_exp_lst.append(f'{chrs}号染色体{i}')
+            else:
+                total_exp_lst.append(f'{i}')
+
+    if out and total_exp_lst:
+        total_exp_lst = [out] + total_exp_lst
+        out = ';'.join(total_exp_lst)
+    elif total_exp_lst:
+        out = ';'.join(total_exp_lst)
+    elif out:
+        out = out
+    elif schr not in ['XY', 'XX']:
+        out = ''
+    else:
+        out = '未见异常'
+
+    if not note:
+        if len(exp_dict) == 1:
+            if re.search('嵌合', list(exp_dict.keys())[0]):
+                if len(exp_dict[list(exp_dict.keys())[0]]) == 1:
+                    note = '谨慎移植'
+                else:
+                    note = '不推荐移植'
+            else:
+                note = '不推荐移植'
+        elif len(exp_dict) > 1:
+            note = '不推荐移植'
+        else:
+            note = '推荐移植'
+    return out, note
+
+
 
 
 # %%
@@ -87,10 +144,13 @@ def dict2ext(res_dict):
         out_dict[idx] = {}
         res_chr = res.strip().split(';')
         schr = res_chr.pop(0)
-        out_dict[idx]['性染色体'] = get_schr(schr)
+        schr = get_schr(schr)
+        out_dict[idx]['性染色体'] = schr
         out_dict[idx]['结果'] = res
         total_lst = []
+        exp_dict = {}
         total_exp_lst = []
+        note = ''
         for r in res_chr:
             if r:
                 if pattern_chr.match(r):
@@ -99,16 +159,23 @@ def dict2ext(res_dict):
                     total_lst.append(pattern_cnv.match(r).groups())
                 else:
                     logging.error(f'{idx}\t{"not match"}')
-        if total_lst:
-            exp_dict = lst2exp(total_lst)
-            for i, v in exp_dict.items():
-                chrs = '、'.join(v)
-                total_exp_lst.append(f'{chrs}号染色体{i}')
-        if total_exp_lst:
-            tmp_exp = '; '.join(total_exp_lst) 
-        else:
-            tmp_exp = '未见异常'
-        out_dict[idx]['解释'] = tmp_exp
+                    total_lst.append([r])
+        # if total_lst:
+        exp_dict = lst2exp(total_lst)
+        final_exp, note = get_note(schr, exp_dict)
+        # else:
+
+        #     for i, v in exp_dict.items():
+        #         chrs = '、'.join(v)
+        #         total_exp_lst.append(f'{chrs}号染色体{i}')
+        # note = get_note(schr, exp_dict)
+        # if total_exp_lst:
+        #     tmp_exp = '; '.join(total_exp_lst) 
+        # else:
+        #     tmp_exp = '未见异常'
+        #     note = '推荐移植'
+        out_dict[idx]['解释'] = final_exp
+        out_dict[idx]['备注'] = note
     return out_dict
 
 
