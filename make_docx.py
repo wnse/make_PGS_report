@@ -16,9 +16,12 @@
 # %%
 import os
 import sys
+import re
 from docx import Document
 from docx.enum.table import WD_ROW_HEIGHT
 from docx.enum.table import WD_ALIGN_VERTICAL
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Cm, Pt, RGBColor
 from docx.oxml.ns import qn
 import pandas as pd
@@ -41,30 +44,38 @@ def add_row(table, row_no, height=1):
         row.height_rule = WD_ROW_HEIGHT.AT_LEAST
         row.height = Cm(height)
 
-def write_table(table, row, col, text, text_vertical=WD_ALIGN_VERTICAL.BOTTOM, bold=False, font_size=10):
+def write_table(table, row, col, text, text_vertical=WD_ALIGN_VERTICAL.BOTTOM, text_para=WD_ALIGN_PARAGRAPH.LEFT, bold=False, font_size=10, line_spacing=16, space_after=8, space_before=8):
     if len(table.rows) < row:
         add_row(table, row)
     cell = table.cell(row-1, col-1)
     cell.vertical_alignment = text_vertical
+    paragraph = cell.paragraphs[0]
+    paragraph.alignment = text_para
+    # paragraph.paragraph_format.line_spacing_rule = SINGL
+    paragraph.paragraph_format.line_spacing = Pt(line_spacing)
+    paragraph.paragraph_format.space_before = Pt(space_before)
+    paragraph.paragraph_format.space_after = Pt(space_after)
     fill_cell(cell, text, bold=bold, font_size=font_size)
     
-def insert_pic(table, row, col, pic_path, width=Cm(19)):
+def insert_pic(table, row, col, pic_path, width=Cm(18), height=Cm(6)):
     if len(table.rows) < row:
         add_row(table, row)
-    table.cell(row-1, col-1).add_paragraph().add_run().add_picture(pic_path, width=width)
+    inline_shape = table.cell(row-1, col-1).add_paragraph().add_run().add_picture(pic_path)
+    inline_shape.width = width
+    inline_shape.height = height
 
 
 # %%
 def make_PGS_report(dict_family, dict_sample, dict_config, outdir='./', png_dir=None, png_name=1):
     for f, family in dict_family.items():
-        logging.info(f)
+        logging.info(f'{f}:{family}')
         f_out = os.path.join(outdir, f'{f}.docx')
         if f in dict_sample.keys():
             d = Document(tempate_file)
             tables = d.tables
             for idx, idx_info in family.items():
                 if idx in dict_config.keys():
-                    logging.info(f'{idx}\t{idx_info}')
+                    # logging.info(f'{idx}\t{idx_info}')
                     if idx_info:
                         tmp_info = f'{idx_info}'.split()[0]
                     else:
@@ -72,16 +83,28 @@ def make_PGS_report(dict_family, dict_sample, dict_config, outdir='./', png_dir=
                     write_table(tables[dict_config[idx]['tab']-1], 
                         dict_config[idx]['row'], 
                         dict_config[idx]['col'], 
-                        tmp_info
+                        tmp_info,
+                        text_para=WD_ALIGN_PARAGRAPH.CENTER,
                         )
             idx = '样本编号'
             row_no = 0
             for s, s_info in dict_sample[f].items():
-                logging.info(f'{s}\t{s_info}')
+                logging.info(f'\t{s}:{s_info}')
                 s_info['样本编号'] = str(s)    
+                bold = False
+                if '备注' in s_info.keys():
+                    if re.search(',推荐移植', s_info['备注']):
+                        bold = True
                 for idx, idx_info in s_info.items():
                     if idx in dict_config.keys():
-                        write_table(tables[dict_config[idx]['tab']-1], dict_config[idx]['row']+row_no, dict_config[idx]['col'], f'{idx_info}')
+                        tables[dict_config[idx]['tab']-1].autofit = False
+                        write_table(tables[dict_config[idx]['tab']-1], 
+                            dict_config[idx]['row']+row_no, 
+                            dict_config[idx]['col'], 
+                            f'{idx_info}', 
+                            bold=bold, 
+                            text_para=WD_ALIGN_PARAGRAPH.CENTER
+                            )
                 if png_dir:
                     write_table(tables[4], row_no*4+1, 1, f"样本编号：", bold=True, font_size=11)
                     write_table(tables[4], row_no*4+2, 1, f"检测结果：", bold=True, font_size=11)
@@ -96,7 +119,10 @@ def make_PGS_report(dict_family, dict_sample, dict_config, outdir='./', png_dir=
                     else:
                         pngName = ''
                     pic_path = os.path.join(pngdir, f'PGTA_{s}.fq_merge_all_chrom{pngName}.png')
-                    insert_pic(tables[4], row_no*4+4, 1, pic_path)
+                    try:
+                        insert_pic(tables[4], row_no*4+4, 1, pic_path)
+                    except Exception as e:
+                        logging.error(e)
                 row_no += 1
             d.save(f_out)
 
@@ -126,10 +152,10 @@ if __name__ == '__main__':
     try:
         df_family = pd.read_excel(f_input, '家系').fillna('')
         dict_family = df_family.set_index('家系编号').to_dict(orient='index')
-        logging.info(dict_family)
+        # logging.info(dict_family)
         df_sample = pd.read_excel(f_input, '样本').fillna('')
         dict_sample = df_sample.groupby('家系编号').apply(lambda x: x.set_index('样本编号').to_dict(orient='index'))
-        logging.info(dict_sample)
+        # logging.info(dict_sample)
     except Exception as e:
         sys.exit(e)
         
