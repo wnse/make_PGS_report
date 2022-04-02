@@ -44,7 +44,7 @@ def add_row(table, row_no, height=1):
         row.height_rule = WD_ROW_HEIGHT.AT_LEAST
         row.height = Cm(height)
 
-def write_table(table, row, col, text, text_vertical=WD_ALIGN_VERTICAL.BOTTOM, text_para=WD_ALIGN_PARAGRAPH.LEFT, bold=False, font_size=10, line_spacing=16, space_after=8, space_before=8):
+def write_table(table, row, col, text, text_vertical=WD_ALIGN_VERTICAL.CENTER, text_para=WD_ALIGN_PARAGRAPH.LEFT, bold=False, font_size=10, line_spacing=16, space_after=8, space_before=8):
     if len(table.rows) < row:
         add_row(table, row)
     cell = table.cell(row-1, col-1)
@@ -53,8 +53,8 @@ def write_table(table, row, col, text, text_vertical=WD_ALIGN_VERTICAL.BOTTOM, t
     paragraph.alignment = text_para
     # paragraph.paragraph_format.line_spacing_rule = SINGL
     paragraph.paragraph_format.line_spacing = Pt(line_spacing)
-    paragraph.paragraph_format.space_before = Pt(space_before)
-    paragraph.paragraph_format.space_after = Pt(space_after)
+    # paragraph.paragraph_format.space_before = Pt(space_before)
+    # paragraph.paragraph_format.space_after = Pt(space_after)
     fill_cell(cell, text, bold=bold, font_size=font_size)
     
 def insert_pic(table, row, col, pic_path, width=Cm(18), height=Cm(6)):
