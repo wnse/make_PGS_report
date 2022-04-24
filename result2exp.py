@@ -62,8 +62,9 @@ def get_exp(lst):
         exp = None
     return [ch, exp]
 
-def lst2exp(lst):
+def lst2exp(chr_num, lst, idx):
     out_dict = {}
+    chr_num_tmp = 46
     if lst:
         exp_list = [get_exp(i) for i in lst]
         for ch, exp in exp_list:
@@ -72,19 +73,29 @@ def lst2exp(lst):
                 out_dict[exp].append(ch)
             else:
                 logging.error(f'illegle character:\t{lst}')
+    if '三体' in out_dict.keys():
+        chr_num_tmp += len(out_dict['三体'])
+    if '单体' in out_dict.keys():
+        chr_num_tmp -= len(out_dict['单体'])
+    if chr_num:
+        if chr_num != str(chr_num_tmp):
+            logging.info(f'{idx} {chr_num} NOT EQUAL !!! {out_dict}')
     return out_dict
 
 
 # %%
 def get_schr(schr):
     note = ''
-    if re.match('\d+,(\w+)', schr):
-        s = re.match('\d+,(\w+)', schr).group(1)
+    pattern = re.compile('(\d+),(\w+)')
+    if pattern.match(schr):
+        (chr_num, s) = pattern.match(schr).groups()
+    #if re.match('(\d+),(\w+)', schr):
+        #s = re.match('(\d+),(\w+)', schr).group(1)
         # if s.upper() == 'XO':
         #     note = ' Turner综合征'
-        return f"{s}"
+        return (chr_num, f"{s}")
     else:
-        return None
+        return None,None
 
 
 def get_note(schr, exp_dict):
@@ -141,10 +152,11 @@ def get_note(schr, exp_dict):
 def dict2ext(res_dict):
     out_dict = {}
     for idx, res in res_dict.items():
+        # logging.info(idx)
         out_dict[idx] = {}
         res_chr = res.strip().split(';')
         schr = res_chr.pop(0)
-        schr = get_schr(schr)
+        chr_num, schr = get_schr(schr)
         out_dict[idx]['性染色体'] = schr
         out_dict[idx]['结果'] = res
         total_lst = []
@@ -161,7 +173,7 @@ def dict2ext(res_dict):
                     logging.error(f'{idx}\t{"not match"}')
                     total_lst.append([r])
         # if total_lst:
-        exp_dict = lst2exp(total_lst)
+        exp_dict = lst2exp(chr_num, total_lst, idx)
         final_exp, note = get_note(schr, exp_dict)
         # else:
 
