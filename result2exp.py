@@ -32,16 +32,28 @@ def get_exp(lst):
     ch = lst[1]
     if ty == '+':
         if not lst[2]:
-            exp = '三体'
+            if ch in ['X','Y']:
+                exp = '重复'
+            else:
+                exp = '三体'
         elif lst[2] == 'mos':
-            exp = '三体嵌合'
+            if ch in ['X','Y']:
+                exp = '重复嵌合'
+            else:
+                exp = '三体嵌合'
         else:
             exp = None
     elif ty == '-':
         if not lst[2]:
-            exp = '单体'
+            if ch in ['X','Y']:
+                exp = '缺失'
+            else:
+                exp = '单体'
         elif lst[2] == 'mos':
-            exp = '单体嵌合'
+            if ch in ['X','Y']:
+                exp = '缺失嵌合'
+            else:
+                exp = '单体嵌合'
         else:
             exp = None
     elif ty == 'dup':
@@ -62,7 +74,7 @@ def get_exp(lst):
         exp = None
     return [ch, exp]
 
-def lst2exp(chr_num, lst, idx):
+def lst2exp(chr_num, lst, idx, schr):
     out_dict = {}
     chr_num_tmp = 46
     if lst:
@@ -77,6 +89,10 @@ def lst2exp(chr_num, lst, idx):
         chr_num_tmp += len(out_dict['三体'])
     if '单体' in out_dict.keys():
         chr_num_tmp -= len(out_dict['单体'])
+    if schr and len(schr) != 2:
+        chr_num_tmp += len(schr) - 2
+    if schr and schr.upper() in ['XO','YO']:
+        chr_num_tmp -=1
     if chr_num:
         if chr_num != str(chr_num_tmp):
             logging.info(f'{idx} {chr_num} NOT EQUAL !!! {out_dict}')
@@ -106,6 +122,12 @@ def get_note(schr, exp_dict):
     elif schr and schr.upper() == 'XO':
         note = '不推荐移植'
         out = 'Turner综合征'
+    elif schr and schr.upper() == 'XXY':
+        note = '不推荐移植'
+        out = '超雌综合征'
+    elif schr and schr.upper() == 'XYY':
+        note = '不推荐移植'
+        out = '超雄综合征'
     elif schr and schr.upper() in ['YO']:
         note = '不推荐移植'
 
@@ -173,7 +195,7 @@ def dict2ext(res_dict):
                     logging.error(f'{idx}\t{"not match"}')
                     total_lst.append([r])
         # if total_lst:
-        exp_dict = lst2exp(chr_num, total_lst, idx)
+        exp_dict = lst2exp(chr_num, total_lst, idx, schr)
         final_exp, note = get_note(schr, exp_dict)
         # else:
 
