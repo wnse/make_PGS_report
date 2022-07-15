@@ -97,7 +97,8 @@ def make_PGS_report(dict_family, dict_sample, dict_config, outdir='./', png_dir=
                 s_info['样本编号'] = str(s)    
                 bold = False
                 if '备注' in s_info.keys():
-                    if re.search(',推荐移植', s_info['备注']):
+                    # if re.search(',推荐移植', s_info['备注']):
+                    if s_info['备注'] == '推荐移植':
                         bold = True
                 for idx, idx_info in s_info.items():
                     if idx in dict_config.keys():
